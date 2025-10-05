@@ -1,0 +1,7 @@
+/* src/styles.css */
+body { font-family: system-ui, sans-serif; max-width: 960px; margin: 0 auto; padding: 16px; }
+header { display:flex; justify-content: space-between; align-items:center; margin-bottom: 12px; }
+.controls .row { display:grid; grid-template-columns: repeat(6, 1fr); gap: 8px; align-items:center; margin: 10px 0; }
+label { font-size: 12px; opacity: 0.75; }
+button { padding: 8px 12px; border-radius: 8px; border: 1px solid #ccc; cursor: pointer; }
+.pay { margin-top: 8px; display:flex; gap: 12px; align-items:center; }
