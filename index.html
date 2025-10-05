@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Leslie Web</title>
+  <link rel="icon" href="/icon.png" />
+  <link rel="stylesheet" href="/src/styles.css" />
+</head>
+<body>
+  <header>
+    <h1>Leslie Web</h1>
+    <button id="start">Iniciar (Microfone)</button>
+  </header>
+
+  <section class="controls">
+    <div class="row">
+      <label>Mix</label><input id="mix" type="range" min="0" max="1" step="0.01">
+      <label>Depth (ms)</label><input id="depthMs" type="range" min="0.1" max="6" step="0.1">
+      <label>Tremolo (dB)</label><input id="tremoloDb" type="range" min="-12" max="0" step="0.5">
+    </div>
+    <div class="row">
+      <label>Sup Slow (Hz)</label><input id="supSlowHz" type="range" min="0.1" max="2" step="0.1">
+      <label>Sup Fast (Hz)</label><input id="supFastHz" type="range" min="3" max="10" step="0.1">
+      <label>Inf Slow (Hz)</label><input id="infSlowHz" type="range" min="0.1" max="2" step="0.1">
+      <label>Inf Fast (Hz)</label><input id="infFastHz" type="range" min="2" max="8" step="0.1">
+    </div>
+    <div class="row">
+      <button id="slow">Chorale</button>
+      <button id="fast">Tremolo</button>
+      <button id="brake">Brake</button>
+      <button id="stop">Stop</button>
+    </div>
+
+    <div class="pay">
+      <button id="buy">Desbloquear Pro</button>
+      <small>Versão Free insere um beep discreto a cada 20s.</small>
+    </div>
+  </section>
+
+  <script type="module">
+    import { bootUI } from '/src/ui.ts';
+    import { setupPaywall } from '/src/paywall.ts';
+    bootUI();
+    setupPaywall();
+  </script>
+</body>
+</html>
