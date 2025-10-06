@@ -125,3 +125,22 @@ input[type="range"]:focus {
   outline-offset: 2px;
   border-color: var(--accent);
 }
+
+/* ===== Indicadores de estado ===== */
+button.state {
+  transition: background 120ms ease, border-color 120ms ease, box-shadow 120ms ease;
+}
+
+button.state.active {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px color-mix(in oklab, var(--accent) 35%, #000 65%);
+  background: color-mix(in oklab, var(--card) 70%, var(--accent) 30%);
+}
+
+/* Bypass ativo (reutiliza .active para manter padrão) */
+button#bypass.active {
+  border-color: #ffb703;
+  box-shadow: 0 0 0 2px color-mix(in oklab, #ffb703 35%, #000 65%);
+  background: color-mix(in oklab, var(--card) 70%, #ffb703 30%);
+}
+
