@@ -18,7 +18,6 @@ export function bootUI() {
   bindSlider('infSlowHz', 0.6);
   bindSlider('infFastHz', 4.5);
 
-  // Botões de estado
   document.getElementById('slow')!.addEventListener('click', () => setState(1));
   document.getElementById('fast')!.addEventListener('click', () => setState(2));
   document.getElementById('brake')!.addEventListener('click', () => setState(3));
@@ -31,5 +30,5 @@ function bindSlider(id: string, def: number) {
   el.addEventListener('input', () => setParam(id, Number(el.value)));
 }
 
-// 🔰 auto-boot ao carregar o módulo
-bootUI(
+// 🔰 evita tree-shake: roda ao carregar o módulo
+bootUI();
