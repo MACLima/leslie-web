@@ -9,7 +9,7 @@ export class LeslieEngine {
 
   async init() {
     this.ctx = new AudioContext({ sampleRate: 48000 });
-    await this.ctx.audioWorklet.addModule('/worklet.js');
+    await this.ctx.audioWorklet.addModule(`${import.meta.env.BASE_URL}worklet.js`);
     this.node = new AudioWorkletNode(this.ctx, 'leslie-processor', {
       outputChannelCount: [2],
       numberOfInputs: 1,
