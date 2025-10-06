@@ -30,3 +30,6 @@ function bindSlider(id: string, def: number) {
   el.value = String(def);
   el.addEventListener('input', () => setParam(id, Number(el.value)));
 }
+
+// 🔰 auto-boot ao carregar o módulo
+bootUI(
