@@ -1,6 +1,6 @@
 import './styles.css';
 import {
-  initLeslie, resume, setParam, setState, toggleBypass,
+  ensureEngine, initLeslie, resume, setParam, setState, toggleBypass,
   listInputs, selectInput, startMic, stopMic,
   midiNoteOn, midiNoteOff, midiCC
 } from './audio';
@@ -12,7 +12,7 @@ export function bootUI() {
   // Iniciar Mic
   const startBtn = document.getElementById('startMic')!;
   startBtn.addEventListener('click', async () => {
-    await initLeslie();
+    await ensureEngine();   // cria engine mesmo que usuário não tenha mexido antes
     await resume();
     await hydrateInputs();
     const sel = document.getElementById('inputSelect') as HTMLSelectElement | null;
@@ -26,7 +26,7 @@ export function bootUI() {
     stopMic();
   });
 
-  // sliders
+  // sliders (aplicam mesmo sem mic — ficam pendentes até engine iniciar)
   bindSlider('mix',       0.9);
   bindSlider('depthMs',   2.5);
   bindSlider('tremoloDb', -4.0);
@@ -35,13 +35,11 @@ export function bootUI() {
   bindSlider('infSlowHz', 0.6);
   bindSlider('infFastHz', 4.5);
 
-  // botões de estado (com destaque visual)
+  // botões de estado (aplicam mesmo sem mic — ficam pendentes)
   bindState('slow', 1);
   bindState('fast', 2);
   bindState('brake', 3);
   bindState('stop', 0);
-
-  // estado inicial destacado
   highlightState(1);
 
   // bypass
@@ -59,11 +57,12 @@ export function bootUI() {
     await selectInput(inputSel.value || undefined);
   });
 
-  // Web MIDI (opcional)
+  // Web MIDI (opcional) — requer engine criada
   const useMidi = document.getElementById('useMidi') as HTMLInputElement;
   useMidi.addEventListener('change', async () => {
     if (useMidi.checked) {
       try {
+        await ensureEngine();
         const access = await (navigator as any).requestMIDIAccess();
         access.inputs.forEach((input: WebMidi.MIDIInput) => {
           input.onmidimessage = (ev: WebMidi.MIDIMessageEvent) => {
@@ -81,14 +80,13 @@ export function bootUI() {
     }
   });
 
-  // Marcação ARIA e classes base nos botões de estado
+  // marcação ARIA e classes base nos botões de estado
   ['slow','fast','brake','stop'].forEach(id => {
     const el = document.getElementById(id)!;
     el.classList.add('state');
     el.setAttribute('role', 'button');
-    el.setAttribute('aria-pressed', 'false');
+    el.setAttribute('aria-pressed', id === 'slow' ? 'true' : 'false');
   });
-  // Bypass com ARIA
   const bp = document.getElementById('bypass')!;
   bp.setAttribute('role', 'button');
   bp.setAttribute('aria-pressed', 'false');
@@ -97,11 +95,15 @@ export function bootUI() {
 function bindSlider(id: string, def: number) {
   const el = document.getElementById(id) as HTMLInputElement;
   el.value = String(def);
-  el.addEventListener('input', () => setParam(id, Number(el.value)));
+  el.addEventListener('input', async () => {
+    await ensureEngine();          // garante que parâmetro será aplicável
+    setParam(id, Number(el.value));
+  });
 }
 
 function bindState(id: string, st: 0|1|2|3) {
-  document.getElementById(id)!.addEventListener('click', () => {
+  document.getElementById(id)!.addEventListener('click', async () => {
+    await ensureEngine();          // permite clicar estado antes de iniciar mic
     setState(st);
     highlightState(st);
   });
