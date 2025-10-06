@@ -5,3 +5,6 @@ export function setupPaywall() {
     alert('Função Pro ainda não habilitada nesta versão pública.');
   });
 }
+
+// 🔰 auto-boot ao carregar o módulo
+setupPaywall();
