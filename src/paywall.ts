@@ -6,5 +6,5 @@ export function setupPaywall() {
   });
 }
 
-// 🔰 auto-boot ao carregar o módulo
+// 🔰 evita tree-shake: roda ao carregar o módulo
 setupPaywall();
