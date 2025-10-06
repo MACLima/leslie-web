@@ -1,8 +1,8 @@
-// Motor de áudio: contexto, worklet e fontes (mic OU tone interno via MIDI)
+// Motor de áudio com inicialização preguiçosa (lazy) e fila de parâmetros/estado
 export type LeslieState = 0 | 1 | 2 | 3; // 0=Stop,1=Slow,2=Fast,3=Brake
 
-let ctx: AudioContext;
-let node: AudioWorkletNode;
+let ctx: AudioContext | null = null;
+let node: AudioWorkletNode | null = null;
 let currentSource: MediaStreamAudioSourceNode | OscillatorNode | null = null;
 let currentStream: MediaStream | null = null;
 
@@ -13,42 +13,66 @@ let isBypassed = false;
 let toneOsc: OscillatorNode | null = null;
 let toneGain: GainNode | null = null;
 
+// ---- Fila de parâmetros/estado antes da engine existir ----
+const pendingParams = new Map<string, number>([
+  ['mix', 0.9],
+  ['depthMs', 2.5],
+  ['tremoloDb', -4.0],
+  ['supSlowHz', 0.8],
+  ['supFastHz', 6.0],
+  ['infSlowHz', 0.6],
+  ['infFastHz', 4.5],
+  ['state', 1],
+]);
+let pendingState: LeslieState = 1;
+
+function engineReady() {
+  return !!(ctx && node);
+}
+
+// Cria contexto + worklet + nó do Leslie (NÃO inicia microfone)
 export async function initLeslie() {
-  if (!ctx) {
-    ctx = new AudioContext();
-    await ctx.audioWorklet.addModule(`${import.meta.env.BASE_URL}worklet.js`);
+  if (engineReady()) return;
 
-    node = new AudioWorkletNode(ctx, 'leslie-processor', {
-      numberOfInputs: 1,
-      numberOfOutputs: 1,
-      outputChannelCount: [2]
-    });
-    node.connect(ctx.destination);
+  ctx = new AudioContext(); // fica "suspended" até resume()
+  await ctx.audioWorklet.addModule(`${import.meta.env.BASE_URL}worklet.js`);
 
-    // parâmetros iniciais
-    setParam('mix', savedMix);
-    setParam('depthMs', 2.5);
-    setParam('tremoloDb', -4.0);
-    setParam('supSlowHz', 0.8);
-    setParam('supFastHz', 6.0);
-    setParam('infSlowHz', 0.6);
-    setParam('infFastHz', 4.5);
-    setState(1); // Slow
+  node = new AudioWorkletNode(ctx, 'leslie-processor', {
+    numberOfInputs: 1,
+    numberOfOutputs: 1,
+    outputChannelCount: [2],
+  });
+  node.connect(ctx.destination);
+
+  // aplica fila pendente
+  for (const [k, v] of pendingParams.entries()) {
+    node.parameters.get(k)?.setValueAtTime(v, ctx.currentTime);
   }
+  savedMix = pendingParams.get('mix') ?? savedMix;
+}
+
+// Garante engine criada (sem retomar áudio)
+export async function ensureEngine() {
+  await initLeslie();
 }
 
 export async function resume() {
-  if (ctx?.state !== 'running') await ctx.resume();
+  if (ctx && ctx.state !== 'running') await ctx.resume();
 }
 
 // --------- Controles DSP ---------
 export function setParam(name: string, value: number) {
-  const p = node.parameters.get(name);
-  if (p) p.setValueAtTime(value, ctx.currentTime);
+  // guarda sempre na fila (caso engine ainda não exista)
+  pendingParams.set(name, value);
   if (name === 'mix' && !isBypassed) savedMix = value;
+
+  if (!engineReady()) return; // será aplicado no init
+  const p = node!.parameters.get(name);
+  if (p && ctx) p.setValueAtTime(value, ctx.currentTime);
 }
 
 export function setState(state: LeslieState) {
+  pendingState = state;
   setParam('state', state);
 }
 
@@ -61,21 +85,22 @@ export function toggleBypass() {
 
 // --------- Entrada de áudio (iniciar/parar mic) ---------
 export async function startMic(deviceId?: string) {
-  // encerra fonte anterior (se havia)
-  stopMic();
+  await ensureEngine();
+  await resume();
 
-  // pede stream de áudio
+  stopMic(); // encerra fonte anterior (se houver)
+
   currentStream = await navigator.mediaDevices.getUserMedia({
     audio: {
       deviceId: deviceId ? { exact: deviceId } : undefined,
       echoCancellation: false,
       noiseSuppression: false,
-      autoGainControl: false
-    }
+      autoGainControl: false,
+    },
   });
 
-  const mic = ctx.createMediaStreamSource(currentStream);
-  mic.connect(node);
+  const mic = ctx!.createMediaStreamSource(currentStream);
+  mic.connect(node!);
   currentSource = mic;
 }
 
@@ -93,6 +118,7 @@ export function stopMic() {
 
 // --------- Listagem/seleção de entradas ---------
 export async function listInputs(): Promise<MediaDeviceInfo[]> {
+  // Tentar permissão para liberar labels (não quebra se negar)
   try { await navigator.mediaDevices.getUserMedia({ audio: true }); } catch {}
   const devs = await navigator.mediaDevices.enumerateDevices();
   return devs.filter(d => d.kind === 'audioinput');
@@ -104,6 +130,7 @@ export async function selectInput(deviceId?: string) {
 
 // --------- Tone interno (para MIDI/diagnóstico) ---------
 export function startTone(freq = 440) {
+  if (!ctx || !node) return; // precisa da engine criada (não precisa do mic)
   stopTone();
   toneOsc = ctx.createOscillator();
   toneOsc.type = 'square';
