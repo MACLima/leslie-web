@@ -35,17 +35,22 @@ export function bootUI() {
   bindSlider('infSlowHz', 0.6);
   bindSlider('infFastHz', 4.5);
 
-  // botões de estado
+  // botões de estado (com destaque visual)
   bindState('slow', 1);
   bindState('fast', 2);
   bindState('brake', 3);
   bindState('stop', 0);
+
+  // estado inicial destacado
+  highlightState(1);
 
   // bypass
   const bypassBtn = document.getElementById('bypass')!;
   bypassBtn.addEventListener('click', () => {
     const on = toggleBypass();
     bypassBtn.textContent = on ? 'Bypass (ON)' : 'Bypass';
+    bypassBtn.classList.toggle('active', on);
+    bypassBtn.setAttribute('aria-pressed', on ? 'true' : 'false');
   });
 
   // seletor de entrada
@@ -75,6 +80,18 @@ export function bootUI() {
       }
     }
   });
+
+  // Marcação ARIA e classes base nos botões de estado
+  ['slow','fast','brake','stop'].forEach(id => {
+    const el = document.getElementById(id)!;
+    el.classList.add('state');
+    el.setAttribute('role', 'button');
+    el.setAttribute('aria-pressed', 'false');
+  });
+  // Bypass com ARIA
+  const bp = document.getElementById('bypass')!;
+  bp.setAttribute('role', 'button');
+  bp.setAttribute('aria-pressed', 'false');
 }
 
 function bindSlider(id: string, def: number) {
@@ -84,7 +101,24 @@ function bindSlider(id: string, def: number) {
 }
 
 function bindState(id: string, st: 0|1|2|3) {
-  document.getElementById(id)!.addEventListener('click', () => setState(st));
+  document.getElementById(id)!.addEventListener('click', () => {
+    setState(st);
+    highlightState(st);
+  });
+}
+
+function highlightState(st: 0|1|2|3) {
+  const ids = ['slow','fast','brake','stop'];
+  ids.forEach(id => {
+    const el = document.getElementById(id)!;
+    const active =
+      (st === 1 && id === 'slow') ||
+      (st === 2 && id === 'fast') ||
+      (st === 3 && id === 'brake') ||
+      (st === 0 && id === 'stop');
+    el.classList.toggle('active', active);
+    el.setAttribute('aria-pressed', active ? 'true' : 'false');
+  });
 }
 
 async function hydrateInputs() {
