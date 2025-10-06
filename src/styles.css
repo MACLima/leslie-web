@@ -1,38 +1,55 @@
+:root {
+  --bg: #0e0f12;
+  --fg: #e8eaf0;
+  --card: #191b20;
+  --accent: #6ea8fe;
+}
+
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+
 body {
-  font-family: sans-serif;
-  background: #111;
-  color: #eee;
   margin: 0;
-  padding: 1rem;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+  background: var(--bg);
+  color: var(--fg);
+  padding: 16px;
 }
 
 header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1rem;
+  margin-bottom: 12px;
 }
 
+h1 { margin: 0; font-size: 20px; }
+
+button {
+  background: var(--card);
+  color: var(--fg);
+  border: 1px solid #2a2f39;
+  border-radius: 10px;
+  padding: 8px 12px;
+  cursor: pointer;
+}
+button:hover { border-color: var(--accent); }
+
 .controls {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
+  background: var(--card);
+  border: 1px solid #2a2f39;
+  border-radius: 12px;
+  padding: 12px;
 }
 
 .row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
+  display: grid;
+  grid-template-columns: repeat(6, minmax(120px, 1fr));
+  gap: 10px;
+  margin: 10px 0;
 }
 
-button {
-  background: #333;
-  color: #eee;
-  border: none;
-  padding: 0.5rem 1rem;
-  cursor: pointer;
-}
-
-button:hover {
-  background: #555;
-}
+label { font-size: 12px; opacity: 0.8; }
+input[type="range"] { width: 100%; }
+.pay { display: flex; gap: 10px; align-items: center; }
+small { opacity: 0.7; }
