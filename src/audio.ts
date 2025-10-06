@@ -4,6 +4,8 @@ export type LeslieState = 0 | 1 | 2 | 3; // 0=Stop,1=Slow,2=Fast,3=Brake
 let ctx: AudioContext;
 let node: AudioWorkletNode;
 let currentSource: MediaStreamAudioSourceNode | OscillatorNode | null = null;
+let currentStream: MediaStream | null = null;
+
 let savedMix = 0.9;
 let isBypassed = false;
 
@@ -52,30 +54,18 @@ export function setState(state: LeslieState) {
 
 // --------- BYPASS ---------
 export function toggleBypass() {
-  if (!node) return;
   isBypassed = !isBypassed;
   setParam('mix', isBypassed ? 0 : savedMix);
   return isBypassed;
 }
 
-// --------- Seleção de entrada (microfone/USB) ---------
-export async function listInputs(): Promise<MediaDeviceInfo[]> {
-  // pedir permissão uma vez para liberar labels
-  try {
-    await navigator.mediaDevices.getUserMedia({ audio: true });
-  } catch {}
-  const devices = await navigator.mediaDevices.enumerateDevices();
-  return devices.filter(d => d.kind === 'audioinput');
-}
+// --------- Entrada de áudio (iniciar/parar mic) ---------
+export async function startMic(deviceId?: string) {
+  // encerra fonte anterior (se havia)
+  stopMic();
 
-export async function selectInput(deviceId?: string) {
-  // desconecta fonte atual
-  if (currentSource) {
-    (currentSource as any).disconnect?.();
-    currentSource = null;
-  }
-  // cria nova stream
-  const stream = await navigator.mediaDevices.getUserMedia({
+  // pede stream de áudio
+  currentStream = await navigator.mediaDevices.getUserMedia({
     audio: {
       deviceId: deviceId ? { exact: deviceId } : undefined,
       echoCancellation: false,
@@ -83,9 +73,33 @@ export async function selectInput(deviceId?: string) {
       autoGainControl: false
     }
   });
-  const mic = ctx.createMediaStreamSource(stream);
+
+  const mic = ctx.createMediaStreamSource(currentStream);
   mic.connect(node);
   currentSource = mic;
+}
+
+export function stopMic() {
+  try { (currentSource as any)?.disconnect?.(); } catch {}
+  currentSource = null;
+
+  if (currentStream) {
+    for (const tr of currentStream.getTracks()) {
+      try { tr.stop(); } catch {}
+    }
+  }
+  currentStream = null;
+}
+
+// --------- Listagem/seleção de entradas ---------
+export async function listInputs(): Promise<MediaDeviceInfo[]> {
+  try { await navigator.mediaDevices.getUserMedia({ audio: true }); } catch {}
+  const devs = await navigator.mediaDevices.enumerateDevices();
+  return devs.filter(d => d.kind === 'audioinput');
+}
+
+export async function selectInput(deviceId?: string) {
+  await startMic(deviceId);
 }
 
 // --------- Tone interno (para MIDI/diagnóstico) ---------
@@ -104,16 +118,13 @@ export function startTone(freq = 440) {
 }
 
 export function stopTone() {
-  try {
-    toneOsc?.stop();
-  } catch {}
+  try { toneOsc?.stop(); } catch {}
   toneOsc?.disconnect?.();
   toneGain?.disconnect?.();
   toneOsc = null;
   toneGain = null;
 }
 
-// MIDI helpers (monofônico simples)
 export function midiNoteOn(midi: number, vel = 100) {
   const freq = 440 * Math.pow(2, (midi - 69) / 12);
   startTone(freq);
@@ -122,8 +133,6 @@ export function midiNoteOff() {
   stopTone();
 }
 export function midiCC(cc: number, value: number) {
-  // Exemplo: CC1 (Modwheel) < 64 => slow; >= 64 => fast
-  if (cc === 1) setState(value < 64 ? 1 : 2);
-  // CC64 (Sustain) >= 64 => Brake, < 64 => volta ao slow
-  if (cc === 64) setState(value >= 64 ? 3 : 1);
+  if (cc === 1) setState(value < 64 ? 1 : 2);     // Modwheel → Slow/Fast
+  if (cc === 64) setState(value >= 64 ? 3 : 1);   // Sustain → Brake/Slow
 }
