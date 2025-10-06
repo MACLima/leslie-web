@@ -1,7 +1,7 @@
 import './styles.css';
 import {
-  initLeslie, setParam, setState, resume,
-  toggleBypass, listInputs, selectInput,
+  initLeslie, resume, setParam, setState, toggleBypass,
+  listInputs, selectInput, startMic, stopMic,
   midiNoteOn, midiNoteOff, midiCC
 } from './audio';
 
@@ -9,11 +9,21 @@ import {
 bootUI();
 
 export function bootUI() {
-  const startBtn = document.getElementById('start')!;
+  // Iniciar Mic
+  const startBtn = document.getElementById('startMic')!;
   startBtn.addEventListener('click', async () => {
     await initLeslie();
     await resume();
     await hydrateInputs();
+    const sel = document.getElementById('inputSelect') as HTMLSelectElement | null;
+    const deviceId = sel?.value || undefined;
+    await startMic(deviceId);
+  });
+
+  // Parar Mic
+  const stopBtn = document.getElementById('stopMic')!;
+  stopBtn.addEventListener('click', () => {
+    stopMic();
   });
 
   // sliders
@@ -25,19 +35,20 @@ export function bootUI() {
   bindSlider('infSlowHz', 0.6);
   bindSlider('infFastHz', 4.5);
 
-  // botões
+  // botões de estado
   bindState('slow', 1);
   bindState('fast', 2);
   bindState('brake', 3);
   bindState('stop', 0);
 
+  // bypass
   const bypassBtn = document.getElementById('bypass')!;
   bypassBtn.addEventListener('click', () => {
     const on = toggleBypass();
     bypassBtn.textContent = on ? 'Bypass (ON)' : 'Bypass';
   });
 
-  // entrada de áudio
+  // seletor de entrada
   const inputSel = document.getElementById('inputSelect') as HTMLSelectElement;
   inputSel.addEventListener('change', async () => {
     await selectInput(inputSel.value || undefined);
